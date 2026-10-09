@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RCON 控制台</title>
+<style>
+  :root {
+    --bg: #0d1017;
+    --panel: #151a23;
+    --panel-2: #1b222e;
+    --border: #242d3d;
+    --text: #dbe2ec;
+    --text-dim: #8b98ab;
+    --accent: #3d9bff;
+    --accent-2: #6cb4ff;
+    --green: #2ecc71;
+    --red: #ff5f56;
+    --yellow: #f5c542;
+    --console-bg: #0a0d12;
+    --mono: "Cascadia Code", "SFMono-Regular", Consolas, "JetBrains Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 顶栏 */
+  header {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  .logo span { color: var(--accent); }
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 20px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 13px; color: var(--text-dim);
+  }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
+  .status-badge.on { color: var(--green); border-color: rgba(46,204,113,.4); }
+  .status-badge.on .status-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  /* 主体布局 */
+  main { flex: 1; display: flex; min-height: 0; }
+  .sidebar {
+    width: 300px; flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* 面板 */
+  .panel { padding: 14px; border-bottom: 1px solid var(--border); }
+  .panel-title {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-dim); margin-bottom: 10px; font-weight: 600;
+  }
+
+  /* 服务器列表 */
+  .server-item {
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--border);
+    margin-bottom: 8px; transition: border-color .15s, background .15s;
+  }
+  .server-item:hover { border-color: #33415a; }
+  .server-item.active { border-color: var(--accent); background: #17233a; }
+  .server-item .name { font-weight: 600; margin-bottom: 2px; }
+  .server-item .meta { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+  .server-item .actions { margin-top: 8px; display: flex; gap: 6px; }
+  .server-item .actions button { flex: 1; }
+
+  /* 按钮 */
+  button {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 7px 12px; font-size: 13px; cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  button:hover { border-color: #33415a; background: #202a3a; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--accent-2); }
+  button.danger { color: var(--red); }
+  button.danger:hover { border-color: var(--red); background: rgba(255,95,86,.08); }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* 快捷命令 */
+  .preset-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset-btn {
+    font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    background: var(--panel-2); border: 1px solid var(--border); cursor: pointer;
+    color: var(--text);
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent-2); }
+
+  /* 控制台 */
+  .console {
+    flex: 1; overflow-y: auto; padding: 14px 18px;
+    background: var(--console-bg);
+    font-family: var(--mono); font-size: 13px; line-height: 1.55;
+  }
+  .line { white-space: pre-wrap; word-break: break-word; margin-bottom: 2px; }
+  .line.cmd { color: var(--accent-2); }
+  .line.cmd::before { content: "> "; color: var(--text-dim); }
+  .line.resp { color: var(--text); }
+  .line.sys { color: var(--text-dim); font-style: italic; }
+  .line.err { color: var(--red); }
+  .line.warn { color: var(--yellow); }
+  .line .tag { color: var(--text-dim); margin-right: 6px; }
+
+  /* 输入栏 */
+  .inputbar {
+    display: flex; gap: 8px; padding: 12px 16px;
+    background: var(--panel); border-top: 1px solid var(--border);
+  }
+  .inputbar input {
+    flex: 1; background: var(--console-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-family: var(--mono); font-size: 14px; outline: none;
+  }
+  .inputbar input:focus { border-color: var(--accent); }
+
+  /* 底部工具栏 */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px 10px; background: var(--panel); flex-wrap: wrap;
+  }
+  .toolbar label { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 12px; cursor: pointer; }
+  .toolbar input[type=checkbox] { accent-color: var(--accent); }
+  .toolbar .spacer { flex: 1; }
+
+  /* 弹窗 */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-mask.hidden { display: none; }
+  .modal {
+    width: 440px; max-width: 92vw; max-height: 88vh; overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px;
+  }
+  .modal h3 { margin-bottom: 16px; font-size: 16px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    width: 100%; background: var(--console-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px;
+    font-size: 14px; outline: none; font-family: inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { font-family: var(--mono); min-height: 120px; resize: vertical; }
+  .field .row { display: flex; gap: 10px; }
+  .field .row > * { flex: 1; }
+  .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #2a3342; border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">RCON<span>控制台</span></div>
+  <div class="status-badge" id="statusBadge"><span class="status-dot"></span><span id="statusText">未连接</span></div>
+</header>
+
+<main>
+  <aside class="sidebar">
+    <div class="panel">
+      <div class="panel-title">服务器</div>
+      <div id="serverList"></div>
+      <button id="addServerBtn" style="width:100%">+ 添加服务器</button>
+    </div>
+    <div class="panel">
+      <div class="panel-title">快捷命令</div>
+      <div class="hint" style="margin-bottom:8px">带 &lt;&gt; 的命令会填入输入框，其余一键执行。</div>
+      <div class="preset-grid" id="presetList"></div>
+    </div>
+  </aside>
+
+  <section class="content">
+    <div class="console" id="console"></div>
+    <div class="inputbar">
+      <input id="cmdInput" placeholder="输入命令，回车发送…" autocomplete="off" spellcheck="false">
+      <button class="primary" id="sendBtn">发送</button>
+    </div>
+    <div class="toolbar">
+      <label><input type="checkbox" id="autoScroll" checked>自动滚动</label>
+      <button id="clearBtn" class="small">清空屏幕</button>
+      <button id="watchBtn" class="small">监控模式</button>
+      <button id="batchBtn" class="small">批量执行</button>
+      <span class="spacer"></span>
+      <button id="discBtn" class="small danger" disabled>断开连接</button>
+    </div>
+  </section>
+</main>
+
+<!-- 服务器编辑弹窗 -->
+<div class="modal-mask hidden" id="serverModal">
+  <div class="modal">
+    <h3 id="serverModalTitle">添加服务器</h3>
+    <input type="hidden" id="serverId">
+    <div class="field"><label>名称</label><input id="fName" placeholder="例如：我的生存服"></div>
+    <div class="field">
+      <label>游戏类型</label>
+      <select id="fGame"></select>
+    </div>
+    <div class="field row">
+      <div><label>主机地址</label><input id="fHost" placeholder="127.0.0.1"></div>
+      <div><label>端口</label><input id="fPort" type="number" placeholder="25575"></div>
+    </div>
+    <div class="field"><label>RCON 密码</label><input id="fPass" type="password" placeholder="服务器配置里的 rcon.password"></div>
+    <div class="field"><label>命令超时（毫秒）</label><input id="fTimeout" type="number" value="5000"></div>
+    <div class="footer">
+      <button id="serverCancel">取消</button>
+      <button class="primary" id="serverSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 监控模式弹窗 -->
+<div class="modal-mask hidden" id="watchModal">
+  <div class="modal">
+    <h3>监控模式</h3>
+    <p class="hint" style="margin-bottom:14px">每隔一段时间自动重复执行同一条命令（如 list / status），实时刷新服务器状态。</p>
+    <div class="field"><label>命令</label><input id="wCmd" placeholder="list"></div>
+    <div class="field"><label>间隔（秒）</label><input id="wInterval" type="number" value="5" min="1"></div>
+    <div class="footer">
+      <button id="watchCancel">取消</button>
+      <button class="primary" id="watchStart">开始监控</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批量执行弹窗 -->
+<div class="modal-mask hidden" id="batchModal">
+  <div class="modal">
+    <h3>批量执行</h3>
+    <p class="hint" style="margin-bottom:14px">每行一条命令，将按顺序依次执行。</p>
+    <div class="field"><textarea id="bCmds" placeholder="list&#10;save-all&#10;say 服务器即将重启"></textarea></div>
+    <div class="footer">
+      <button id="batchCancel">取消</button>
+      <button class="primary" id="batchRun">执行</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ================= 游戏与命令预设 =================
+  const GAMES = {
+    minecraft: { name: 'Minecraft', defaultPort: 25575 },
+    source:    { name: 'Source (CS:GO/CS2/GMOD/TF2)', defaultPort: 27015 },
+    rust:      { name: 'Rust', defaultPort: 28016 },
+    ark:       { name: 'ARK', defaultPort: 27020 },
+    palworld:  { name: 'Palworld (幻兽帕鲁)', defaultPort: 25575 },
+    generic:   { name: '通用', defaultPort: 25575 },
+  };
+  const PRESETS = {
+    minecraft: [
+      ['在线玩家', 'list'], ['保存世界', 'save-all'], ['查看种子', 'seed'],
+      ['白名单列表', 'whitelist list'], ['添加白名单', 'whitelist add <player>'],
+      ['移除白名单', 'whitelist remove <player>'], ['封禁玩家', 'ban <player>'],
+      ['解封玩家', 'pardon <player>'], ['踢出玩家', 'kick <player>'],
+      ['给予OP', 'op <player>'], ['移除OP', 'deop <player>'],
+      ['广播消息', 'say <msg>'], ['给予物品', 'give <player> <item> <count>'],
+      ['传送', 'tp <player> <target>'], ['切换模式', 'gamemode <mode> <player>'],
+      ['设置时间', 'time set <value>'], ['设置天气', 'weather <type>'],
+      ['设置难度', 'difficulty <level>'], ['TPS', 'tps'], ['停止服务器', 'stop'],
+    ],
+    source: [
+      ['状态', 'status'], ['在线用户', 'users'], ['踢出', 'kickid <userid>'],
+      ['封禁', 'banid <minutes> <userid>'], ['广播', 'say <msg>'],
+      ['换图', 'changelevel <map>'], ['切地图', 'map <map>'],
+      ['重启回合', 'mp_restartgame 1'], ['开作弊', 'sv_cheats 1'], ['关作弊', 'sv_cheats 0'],
+    ],
+    rust: [
+      ['状态', 'status'], ['在线玩家', 'players'], ['广播', 'say <msg>'],
+      ['踢出', 'kick <player>'], ['封禁', 'ban <player> <reason>'],
+      ['重启插件', 'o.reload <plugin>'], ['服务器信息', 'serverinfo'], ['保存', 'save'],
+    ],
+    ark: [
+      ['玩家列表', 'ListPlayers'], ['广播', 'ServerChat <msg>'], ['踢出', 'KickPlayer <steamid>'],
+      ['封禁', 'BanPlayer <steamid>'], ['保存世界', 'SaveWorld'], ['关闭服务器', 'DoExit'],
+    ],
+    palworld: [
+      ['在线玩家', 'ShowPlayers'], ['广播', 'Broadcast <msg>'], ['踢出', 'KickPlayer <steamid>'],
+      ['封禁', 'BanPlayer <steamid>'], ['保存', 'Save'], ['关闭', 'Shutdown <seconds> <msg>'],
+      ['服务器信息', 'Info'],
+    ],
+    generic: [
+      ['帮助', 'help'], ['状态', 'status'],
+    ],
+  };
+
+  // ================= 状态 =================
+  const store = {
+    servers: JSON.parse(localStorage.getItem('rcon_servers') || '[]'),
+    currentId: localStorage.getItem('rcon_current') || null,
+    history: JSON.parse(localStorage.getItem('rcon_history') || '[]'),
+    historyIdx: -1,
+    connected: false,
+    watchTimer: null,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const api = async (path, body) => {
+    const res = await fetch(path, {
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return res.json();
+  };
+
+  // ================= 控制台渲染 =================
+  function log(text, cls) {
+    const c = $('console');
+    const div = document.createElement('div');
+    div.className = 'line ' + (cls || 'resp');
+    div.textContent = text;
+    c.appendChild(div);
+    if ($('autoScroll').checked) c.scrollTop = c.scrollHeight;
+  }
+  const logCmd = (t) => log(t, 'cmd');
+  const logResp = (t, partial) => {
+    log(t === '' ? '(无响应)' : t, 'resp');
+    if (partial) log('⚠ 响应可能在超时前未完全返回', 'warn');
+  };
+  const logSys = (t) => log(t, 'sys');
+  const logErr = (t) => log(t, 'err');
+
+  // ================= 连接 =================
+  function updateStatus(connected, label) {
+    store.connected = connected;
+    const badge = $('statusBadge');
+    badge.className = 'status-badge' + (connected ? ' on' : '');
+    $('statusText').textContent = connected ? ('已连接: ' + label) : '未连接';
+    $('discBtn').disabled = !connected;
+  }
+
+  async function connectTo(id) {
+    const s = store.servers.find((x) => x.id === id);
+    if (!s) return;
+    store.currentId = id;
+    localStorage.setItem('rcon_current', id);
+    renderServers();
+
+    logSys('正在连接 ' + s.name + ' (' + s.host + ':' + s.port + ') …');
+    const r = await api('/api/connect', {
+      host: s.host, port: s.port, password: s.password, timeout: s.timeout || 5000,
+    });
+    if (r.ok) {
+      updateStatus(true, s.name);
+      logSys('✓ 已连接并认证成功');
+      renderPresets(s.game);
+    } else {
+      updateStatus(false);
+      logErr('连接失败: ' + (r.error || '未知错误'));
+    }
+  }
+
+  async function disconnect() {
+    if (stopWatch()) logSys('已停止监控模式');
+    await api('/api/disconnect', {});
+    updateStatus(false);
+    logSys('已断开连接');
+  }
+
+  // ================= 命令发送 =================
+  async function sendCommand(cmd) {
+    cmd = (cmd || '').trim();
+    if (!cmd) return;
+    if (!store.connected) { logErr('未连接服务器，请先在左侧选择并连接'); return; }
+
+    logCmd(cmd);
+    addHistory(cmd);
+    const r = await api('/api/command', { command: cmd });
+    if (r.ok) logResp(r.response, r.partial);
+    else logErr(r.error || '命令执行失败');
+  }
+
+  function addHistory(cmd) {
+    store.history = store.history.filter((h) => h !== cmd);
+    store.history.push(cmd);
+    if (store.history.length > 200) store.history.shift();
+    localStorage.setItem('rcon_history', JSON.stringify(store.history));
+    store.historyIdx = store.history.length;
+  }
+
+  // ================= 服务器管理 =================
+  function renderServers() {
+    const list = $('serverList');
+    list.innerHTML = '';
+    if (store.servers.length === 0) {
+      list.innerHTML = '<div class="hint" style="padding:6px 2px">暂无服务器，点击下方按钮添加。</div>';
+      return;
+    }
+    store.servers.forEach((s) => {
+      const div = document.createElement('div');
+      div.className = 'server-item' + (s.id === store.currentId ? ' active' : '');
+      const game = (GAMES[s.game] || GAMES.generic).name;
+      div.innerHTML = '<div class="name"></div><div class="meta"></div><div class="actions"></div>';
+      div.querySelector('.name').textContent = s.name;
+      div.querySelector('.meta').textContent = s.host + ':' + s.port + ' · ' + game;
+      const actions = div.querySelector('.actions');
+      const btnConn = document.createElement('button');
+      btnConn.className = 'small primary';
+      btnConn.textContent = '连接';
+      btnConn.onclick = (e) => { e.stopPropagation(); connectTo(s.id); };
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'small';
+      btnEdit.textContent = '编辑';
+      btnEdit.onclick = (e) => { e.stopPropagation(); openServerModal(s.id); };
+      const btnDel = document.createElement('button');
+      btnDel.className = 'small danger';
+      btnDel.textContent = '删除';
+      btnDel.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm('确定删除服务器「' + s.name + '」？')) {
+          store.servers = store.servers.filter((x) => x.id !== s.id);
+          if (store.currentId === s.id) store.currentId = null;
+          localStorage.setItem('rcon_servers', JSON.stringify(store.servers));
+          renderServers();
+        }
+      };
+      actions.appendChild(btnConn);
+      actions.appendChild(btnEdit);
+      actions.appendChild(btnDel);
+      list.appendChild(div);
+    });
+  }
+
+  function openServerModal(id) {
+    const s = id ? store.servers.find((x) => x.id === id) : null;
+    $('serverModalTitle').textContent = s ? '编辑服务器' : '添加服务器';
+    $('serverId').value = s ? s.id : '';
+    $('fName').value = s ? s.name : '';
+    $('fGame').value = s ? s.game : 'minecraft';
+    $('fHost').value = s ? s.host : '';
+    $('fPort').value = s ? s.port : GAMES.minecraft.defaultPort;
+    $('fPass').value = s ? s.password : '';
+    $('fTimeout').value = s ? (s.timeout || 5000) : 5000;
+    $('serverModal').classList.remove('hidden');
+    $('fName').focus();
+  }
+
+  function saveServer() {
+    const name = $('fName').value.trim() || '未命名服务器';
+    const game = $('fGame').value;
+    const host = $('fHost').value.trim();
+    const port = parseInt($('fPort').value, 10);
+    const password = $('fPass').value;
+    const timeout = parseInt($('fTimeout').value, 10) || 5000;
+    if (!host || !port) { alert('请填写主机地址和端口'); return; }
+
+    const id = $('serverId').value;
+    if (id) {
+      const s = store.servers.find((x) => x.id === id);
+      Object.assign(s, { name, game, host, port, password, timeout });
+    } else {
+      store.servers.push({
+        id: 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name, game, host, port, password, timeout,
+      });
+    }
+    localStorage.setItem('rcon_servers', JSON.stringify(store.servers));
+    $('serverModal').classList.add('hidden');
+    renderServers();
+  }
+
+  // ================= 快捷命令 =================
+  function renderPresets(game) {
+    const box = $('presetList');
+    box.innerHTML = '';
+    const presets = PRESETS[game] || PRESETS.generic;
+    presets.forEach(([label, cmd]) => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.textContent = label;
+      btn.onclick = () => {
+        if (/<[^>]+>/.test(cmd)) {
+          $('cmdInput').value = cmd;
+          $('cmdInput').focus();
+        } else {
+          sendCommand(cmd);
+        }
+      };
+      box.appendChild(btn);
+    });
+  }
+
+  // ================= 监控模式 =================
+  function startWatch() {
+    const cmd = $('wCmd').value.trim();
+    const interval = parseInt($('wInterval').value, 10);
+    if (!cmd) { alert('请输入监控命令'); return; }
+    if (!interval || interval < 1) { alert('间隔至少 1 秒'); return; }
+    $('watchModal').classList.add('hidden');
+    stopWatch();
+    logSys('▶ 开始监控模式: 每 ' + interval + ' 秒执行一次「' + cmd + '」');
+    sendCommand(cmd);
+    store.watchTimer = setInterval(() => sendCommand(cmd), interval * 1000);
+    $('watchBtn').textContent = '停止监控';
+  }
+  function stopWatch() {
+    if (store.watchTimer) {
+      clearInterval(store.watchTimer);
+      store.watchTimer = null;
+      $('watchBtn').textContent = '监控模式';
+      return true;
+    }
+    return false;
+  }
+
+  // ================= 批量执行 =================
+  async function runBatch() {
+    const cmds = $('bCmds').value.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (cmds.length === 0) { alert('请输入命令'); return; }
+    $('batchModal').classList.add('hidden');
+    logSys('▶ 批量执行 ' + cmds.length + ' 条命令');
+    for (const cmd of cmds) {
+      await sendCommand(cmd);
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    logSys('✓ 批量执行完成');
+  }
+
+  // ================= 事件绑定 =================
+  function bindEvents() {
+    $('addServerBtn').onclick = () => openServerModal(null);
+    $('serverCancel').onclick = () => $('serverModal').classList.add('hidden');
+    $('serverSave').onclick = saveServer;
+
+    $('sendBtn').onclick = () => { sendCommand($('cmdInput').value); $('cmdInput').value = ''; $('cmdInput').focus(); };
+    $('cmdInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendCommand($('cmdInput').value);
+        $('cmdInput').value = '';
+        store.historyIdx = store.history.length;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (store.historyIdx > 0) store.historyIdx--;
+        $('cmdInput').value = store.history[store.historyIdx] || '';
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (store.historyIdx < store.history.length - 1) store.historyIdx++;
+        else store.historyIdx = store.history.length;
+        $('cmdInput').value = store.history[store.historyIdx] || '';
+      }
+    });
+
+    $('clearBtn').onclick = () => { $('console').innerHTML = ''; };
+    $('discBtn').onclick = disconnect;
+
+    $('watchBtn').onclick = () => {
+      if (store.watchTimer) { if (stopWatch()) logSys('已停止监控模式'); return; }
+      $('wCmd').value = 'list';
+      $('wInterval').value = 5;
+      $('watchModal').classList.remove('hidden');
+    };
+    $('watchCancel').onclick = () => $('watchModal').classList.add('hidden');
+    $('watchStart').onclick = startWatch;
+
+    $('batchBtn').onclick = () => $('batchModal').classList.remove('hidden');
+    $('batchCancel').onclick = () => $('batchModal').classList.add('hidden');
+    $('batchRun').onclick = runBatch;
+
+    // 点击弹窗遮罩关闭
+    document.querySelectorAll('.modal-mask').forEach((m) => {
+      m.addEventListener('click', (e) => { if (e.target === m) m.classList.add('hidden'); });
+    });
+  }
+
+  // ================= 初始化 =================
+  function init() {
+    const sel = $('fGame');
+    sel.innerHTML = '';
+    Object.entries(GAMES).forEach(([key, g]) => {
+      const o = document.createElement('option');
+      o.value = key;
+      o.textContent = g.name;
+      sel.appendChild(o);
+    });
+
+    bindEvents();
+    renderServers();
+    renderPresets('minecraft');
+
+    // 端口跟随游戏类型自动填充
+    sel.addEventListener('change', () => {
+      if (!$('serverId').value) {
+        $('fPort').value = GAMES[sel.value].defaultPort;
+      }
+    });
+
+    // 启动时查询后端状态
+    api('/api/status').then((r) => {
+      if (r.connected && r.info) updateStatus(true, r.info.host + ':' + r.info.port);
+    });
+
+    logSys('欢迎使用 RCON 控制台。请在左侧添加并连接服务器。');
+    logSys('提示：可用 node test/mock-server.js 启动一个模拟服务器用于测试。');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

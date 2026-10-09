@@ -1,0 +1,15 @@
+{
+  "name": "rcon-console",
+  "version": "1.0.0",
+  "description": "跨游戏 RCON 远程控制台（Minecraft / CS:GO / CS2 / GMOD / Rust / ARK / Palworld 等）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "mock": "node test/mock-server.js",
+    "cli": "node server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT"
+}
