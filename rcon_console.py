@@ -15,6 +15,7 @@ GeLi RCON —— 单文件桌面程序
 使用 RCON 协议的游戏服务器。
 
 品牌：GeLi —— 白色主调 + 蓝色主色点缀 + 浅绿次色点缀（#96FF8F → #8DFFFA）
+图标：assets/icon.ico（gelibot 鸽子 logo，另以 base64 内嵌供窗口 / 网页 / favicon 使用）
 """
 
 import os
@@ -26,6 +27,18 @@ import socket
 import threading
 import webbrowser
 import http.server
+
+def resource_path(name):
+    """返回随程序分发的资源文件绝对路径，兼容 PyInstaller 单文件模式。
+
+    同时兼容源码运行（assets/ 子目录）与打包运行（资源平铺在根目录）。
+    """
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    for p in (os.path.join(base, name), os.path.join(base, "assets", name)):
+        if os.path.exists(p):
+            return p
+    return os.path.join(base, name)
+
 
 # =============================================================================
 # RCON 协议客户端
@@ -147,12 +160,179 @@ APP = {"httpd": None, "thread": None, "port": None, "running": False}
 # 内嵌 Web 界面（GeLi 品牌配色：白底 + 蓝主色 + 浅绿点缀）
 # =============================================================================
 
+# 品牌图标（gelibot 鸽子 logo，内嵌 base64，保证单文件可移植）
+LOGO_PNG_B64 = (
+    "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"
+    "D2osNPvhLKWaAAAAAElFTkSuQmCC"
+)
+
+FAVICON_PNG_B64 = (
+    "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"
+    "AABJRU5ErkJggg=="
+)
+
+LOGO_GUI_B64 = (
+    "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"
+)
+
 INDEX_HTML = r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GeLi RCON</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,__FAVICON_B64__">
 <style>
   :root {
     --bg: #f6f8f7;
@@ -192,7 +372,11 @@ INDEX_HTML = r"""<!DOCTYPE html>
     opacity: .9; pointer-events: none;
   }
   .logo { font-size: 16px; font-weight: 700; display: flex; align-items: baseline; gap: 2px; }
-  .logo .mark { margin-right: 6px; font-size: 17px; }
+  .logo { align-items: center; }
+  .logo .mark {
+    width: 24px; height: 24px; margin-right: 8px; border-radius: 6px;
+    display: block; flex-shrink: 0;
+  }
   .logo .word { color: var(--accent); }
   .status-badge {
     display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;
@@ -304,7 +488,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <div class="logo"><span class="mark">🕊️</span>GeLi<span class="word">RCON</span></div>
+  <div class="logo"><img class="mark" src="data:image/png;base64,__LOGO_B64__" alt="GeLi">GeLi<span class="word">RCON</span></div>
   <div class="status-badge" id="statusBadge"><span class="status-dot"></span><span id="statusText">未连接</span></div>
 </header>
 
@@ -722,6 +906,11 @@ INDEX_HTML = r"""<!DOCTYPE html>
 </html>
 """
 
+# 把内嵌图标填进网页（保证 index.html 自包含，无外部依赖）
+INDEX_HTML = (INDEX_HTML
+              .replace("__LOGO_B64__", LOGO_PNG_B64)
+              .replace("__FAVICON_B64__", FAVICON_PNG_B64))
+
 
 # =============================================================================
 # HTTP 服务（REST API + 内嵌 Web 界面）
@@ -898,10 +1087,26 @@ class RconApp:
         self.root = tk.Tk()
         self.root.title("GeLi RCON")
         self.root.configure(bg=WHITE)
+        self._apply_icon()
         self.root.resizable(False, False)
         self._build_ui()
         self._fit_window(440)
         self.root.protocol("WM_DELETE_WINDOW", self.quit_action)
+
+    def _apply_icon(self):
+        """窗口标题栏 + 任务栏图标：优先用随包的 icon.ico，回退到内嵌 PNG。"""
+        ico = resource_path("icon.ico")
+        if os.path.exists(ico):
+            try:
+                self.root.iconbitmap(default=ico)
+                return
+            except Exception:
+                pass
+        try:
+            self._icon_photo = self.tk.PhotoImage(data=FAVICON_PNG_B64)
+            self.root.iconphoto(True, self._icon_photo)
+        except Exception:
+            pass
 
     def _fit_window(self, width):
         """按内容实际需要的高度定尺寸，避免底部控件被裁切。"""
@@ -931,8 +1136,13 @@ class RconApp:
         title_row = tk.Frame(body, bg=WHITE)
         title_row.grid(row=0, column=0, sticky="w")
 
-        tk.Label(title_row, text="🕊️", bg=WHITE, fg=DARK_TEXT,
-                 font=("Segoe UI Emoji", 17)).pack(side="left", padx=(0, 8))
+        # 品牌 logo（gelibot 鸽子，内嵌 base64）
+        try:
+            self.logo_img = tk.PhotoImage(data=LOGO_GUI_B64)
+            tk.Label(title_row, image=self.logo_img, bg=WHITE, bd=0).pack(side="left", padx=(0, 10))
+        except Exception:
+            tk.Label(title_row, text="GeLi", bg=WHITE, fg=DARK_TEXT,
+                     font=("Segoe UI Emoji", 17)).pack(side="left", padx=(0, 8))
         tk.Label(title_row, text="GeLi", bg=WHITE, fg=DARK_TEXT,
                  font=(FONT, 20, "bold")).pack(side="left")
         tk.Label(title_row, text="RCON", bg=WHITE, fg=BLUE,

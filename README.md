@@ -1,4 +1,6 @@
-# 🕊️ GeLi RCON
+<p align="center"><img src="docs/logo.png" width="110" alt="GeLi RCON logo"></p>
+
+# GeLi RCON
 
 > **GeLi RCON** — a zero-dependency, cross-game RCON console.
 > **GeLi RCON** —— 零依赖、跨游戏的 RCON 远程控制台。
@@ -41,8 +43,13 @@ Supports **Minecraft, CS:GO / CS2 / GMOD / TF2 (Source), Rust, ARK, Palworld** a
 | | |
 |---|---|
 | Name · 名称 · 名称 | GeLi RCON |
-| Mascot · 吉祥物 · マスコット | 🕊️ |
+| Logo · 图标 · ロゴ | ![logo](docs/logo.png) — 鸽子剪影 + 速度线 / pigeon with speed lines |
+| Icon file · 图标文件 | [`assets/icon.ico`](assets/icon.ico)（7 档尺寸 16→256 px / 7 sizes） |
 | Colors · 配色 · カラー | 白色主调 · White base · 白ベース<br>蓝色主色点缀 · Blue primary accent · 青のメインアクセント `#2B7FFF`<br>浅绿次色点缀 · Mint secondary accent · ミントのサブアクセント `#96FF8F → #8DFFFA` |
+
+Logo 同源于 [gelibot](https://github.com/LumiCyan/gelibot)，已内嵌到程序（窗口 / 任务栏 / 网页顶栏 / favicon），无需外部图片文件。
+The logo comes from [gelibot](https://github.com/LumiCyan/gelibot) and is embedded in the app (window, taskbar, web header, favicon) — no external image files needed.
+ロゴは [gelibot](https://github.com/LumiCyan/gelibot) 由来で、アプリ内に埋め込み済み（ウィンドウ / タスクバー / Web ヘッダー / favicon）。
 
 ---
 
@@ -78,8 +85,12 @@ node test/mock-server.js   # 127.0.0.1:25575, password: test123
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name GeLi-RCON rcon_console.py
+pyinstaller --onefile --windowed --name GeLi-RCON \
+  --icon "assets/icon.ico" --add-data "assets/icon.ico;." rcon_console.py
 ```
+
+> Windows 上用 `;` 分隔 `--add-data`，macOS / Linux 用 `:`。
+> On Windows use `;` in `--add-data`, on macOS / Linux use `:`.
 
 ---
 
@@ -90,6 +101,8 @@ pyinstaller --onefile --windowed --name GeLi-RCON rcon_console.py
 ├── rcon.js              # RCON 协议客户端 / protocol client
 ├── server.js            # Node 后端 + CLI / Node backend + CLI
 ├── public/index.html    # Web 控制台 / web console
+├── assets/icon.ico      # 品牌图标（7 档尺寸）/ brand icon (7 sizes)
+├── tools/               # 截图与校验脚本 / screenshot & verify helpers
 ├── test/mock-server.js  # 模拟服务器 / mock server
 └── package.json
 ```
