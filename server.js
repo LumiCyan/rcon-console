@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * server.js — RCON 控制台入口
+ * server.js — GeLi RCON 入口
  *
  * 两种使用方式：
  *   1) Web 图形界面：  node server.js [--web-port 8080]
@@ -185,7 +185,7 @@ function startServer() {
 
   server.listen(webPort, () => {
     console.log('==============================================');
-    console.log('  RCON 控制台已启动');
+    console.log('  GeLi RCON 已启动');
     console.log(`  Web 界面: http://localhost:${webPort}`);
     console.log('  按 Ctrl+C 停止服务');
     console.log('==============================================');

@@ -1,8 +1,8 @@
-# RCON Console · RCON 控制台 · RCON コンソール
+# 🕊️ GeLi RCON
 
-> A zero-dependency, cross-game RCON client.
-> 零依赖、跨游戏的 RCON 远程控制台客户端。
-> 依存関係ゼロ、マルチゲーム対応の RCON クライアント。
+> **GeLi RCON** — a zero-dependency, cross-game RCON console.
+> **GeLi RCON** —— 零依赖、跨游戏的 RCON 远程控制台。
+> **GeLi RCON** —— 依存関係ゼロ、マルチゲーム対応の RCON コンソール。
 
 Supports **Minecraft, CS:GO / CS2 / GMOD / TF2 (Source), Rust, ARK, Palworld** and almost any game server using the RCON protocol.
 
@@ -36,13 +36,29 @@ Supports **Minecraft, CS:GO / CS2 / GMOD / TF2 (Source), Rust, ARK, Palworld** a
 
 ---
 
+## 🎨 Brand · 品牌 · ブランド
+
+| | |
+|---|---|
+| Name · 名称 · 名称 | GeLi RCON |
+| Mascot · 吉祥物 · マスコット | 🕊️ |
+| Colors · 配色 · カラー | 白色主调 · White base · 白ベース<br>蓝色主色点缀 · Blue primary accent · 青のメインアクセント `#2B7FFF`<br>浅绿次色点缀 · Mint secondary accent · ミントのサブアクセント `#96FF8F → #8DFFFA` |
+
+---
+
+## 🖼️ Preview · 界面预览 · プレビュー
+
+![GeLi RCON](docs/screenshot.png)
+
+---
+
 ## 🚀 Quick Start · 快速开始 · クイックスタート
 
 **Desktop · 桌面版 · デスクトップ**
 
 ```
-双击 dist/RCON控制台.exe     # 或 / または: python rcon_console.py
-double-click dist/RCON控制台.exe
+双击 dist/GeLi-RCON.exe     # 或 / または: python rcon_console.py
+double-click dist/GeLi-RCON.exe
 ```
 
 **CLI · 命令行 · コマンドライン**
@@ -62,7 +78,7 @@ node test/mock-server.js   # 127.0.0.1:25575, password: test123
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name RCON控制台 rcon_console.py
+pyinstaller --onefile --windowed --name GeLi-RCON rcon_console.py
 ```
 
 ---

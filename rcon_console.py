@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-RCON 控制台 —— 单文件桌面程序
+GeLi RCON —— 单文件桌面程序
 
 运行后弹出一个窗口：
   · 一键启动 —— 启动内置后端（HTTP 服务）并自动打开网页控制台
@@ -13,6 +13,8 @@ RCON 控制台 —— 单文件桌面程序
 
 支持：Minecraft、CS:GO / CS2 / GMOD / TF2、Rust、ARK、Palworld 等几乎所有
 使用 RCON 协议的游戏服务器。
+
+品牌：GeLi —— 白色主调 + 蓝色主色点缀 + 浅绿次色点缀（#96FF8F → #8DFFFA）
 """
 
 import os
@@ -142,7 +144,7 @@ APP = {"httpd": None, "thread": None, "port": None, "running": False}
 
 
 # =============================================================================
-# 内嵌 Web 界面（DeepSeek 蓝白简洁配色）
+# 内嵌 Web 界面（GeLi 品牌配色：白底 + 蓝主色 + 浅绿点缀）
 # =============================================================================
 
 INDEX_HTML = r"""<!DOCTYPE html>
@@ -150,18 +152,22 @@ INDEX_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RCON 控制台</title>
+<title>GeLi RCON</title>
 <style>
   :root {
-    --bg: #f5f6f8;
+    --bg: #f6f8f7;
     --panel: #ffffff;
-    --panel-2: #f3f4f6;
-    --border: #e5e6eb;
-    --text: #1d2129;
-    --text-dim: #86909c;
-    --accent: #4d6bfe;
-    --accent-hover: #3354f5;
-    --accent-soft: #eef1ff;
+    --panel-2: #f4f6f5;
+    --border: #e4e8e6;
+    --text: #16202b;
+    --text-dim: #83909c;
+    --accent: #2b7fff;
+    --accent-hover: #1a66e0;
+    --accent-soft: #edf3ff;
+    --mint: #96ff8f;
+    --cyan: #8dfffa;
+    --mint-ink: #0fa968;
+    --mint-soft: #f0fff2;
     --green: #00b42a;
     --red: #f53f3f;
     --yellow: #ff7d00;
@@ -176,10 +182,18 @@ INDEX_HTML = r"""<!DOCTYPE html>
   }
   header {
     height: 54px; display: flex; align-items: center; justify-content: space-between;
-    padding: 0 20px; background: var(--panel); border-bottom: 1px solid var(--border); flex-shrink: 0;
+    padding: 0 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; position: relative;
   }
-  .logo { font-size: 16px; font-weight: 700; }
-  .logo span { color: var(--accent); }
+  /* 品牌渐变细线：浅绿 → 浅青（取自 GeLi 图标） */
+  header::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: linear-gradient(90deg, var(--mint), var(--cyan), var(--mint));
+    opacity: .9; pointer-events: none;
+  }
+  .logo { font-size: 16px; font-weight: 700; display: flex; align-items: baseline; gap: 2px; }
+  .logo .mark { margin-right: 6px; font-size: 17px; }
+  .logo .word { color: var(--accent); }
   .status-badge {
     display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;
     background: var(--panel-2); border: 1px solid var(--border); font-size: 13px; color: var(--text-dim);
@@ -229,7 +243,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
     font-size: 12px; padding: 5px 10px; border-radius: 7px; background: var(--panel-2);
     border: 1px solid var(--border); cursor: pointer; color: var(--text);
   }
-  .preset-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .preset-btn:hover { border-color: var(--mint-ink); color: var(--mint-ink); background: var(--mint-soft); }
 
   .console {
     flex: 1; overflow-y: auto; padding: 14px 18px; background: var(--panel);
@@ -290,7 +304,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <div class="logo">RCON<span>控制台</span></div>
+  <div class="logo"><span class="mark">🕊️</span>GeLi<span class="word">RCON</span></div>
   <div class="status-badge" id="statusBadge"><span class="status-dot"></span><span id="statusText">未连接</span></div>
 </header>
 
@@ -698,7 +712,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
       if (r.connected && r.info) updateStatus(true, r.info.host + ':' + r.info.port);
     });
 
-    logSys('欢迎使用 RCON 控制台。请在左侧添加并连接服务器。');
+    logSys('欢迎使用 GeLi RCON。请在左侧添加并连接服务器。');
   }
 
   init();
@@ -819,21 +833,47 @@ def start_http_server(preferred_port=8080):
 
 
 # =============================================================================
-# 弹窗 GUI（tkinter，DeepSeek 蓝白配色）
+# 弹窗 GUI（tkinter，GeLi 品牌配色）
 # =============================================================================
 
-BLUE = "#4D6BFE"
-BLUE_DARK = "#3354F5"
-BLUE_LIGHT = "#B9C6F5"
+BLUE = "#2B7FFF"        # 主色：品牌蓝
+BLUE_DARK = "#1A66E0"
+BLUE_LIGHT = "#BBD4FF"
+MINT = "#96FF8F"        # 次色：品牌浅绿（图标渐变起点）
+CYAN = "#8DFFFA"        # 次色：品牌浅青（图标渐变终点）
+MINT_INK = "#0FA968"    # 浅绿的深色版，用于可读文字
+MINT_SOFT = "#F0FFF2"
 WHITE = "#FFFFFF"
-DARK_TEXT = "#1D2129"
-GRAY_TEXT = "#86909C"
-LIGHT_BG = "#F5F6F8"
-BORDER = "#E5E6EB"
-GREEN = "#00B42A"
+DARK_TEXT = "#16202B"
+GRAY_TEXT = "#83909C"
+LIGHT_BG = "#F4F6F5"
+BORDER = "#E4E8E6"
+GREEN = MINT_INK
 RED = "#F53F3F"
 GRAY_DOT = "#C9CDD4"
 FONT = "Microsoft YaHei"
+
+
+def _hex_to_rgb(value):
+    value = value.lstrip("#")
+    return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _mix(c1, c2, t):
+    a, b = _hex_to_rgb(c1), _hex_to_rgb(c2)
+    return "#%02x%02x%02x" % tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def draw_brand_gradient(canvas, width, height):
+    """在 Canvas 上绘制品牌渐变条：浅绿 → 浅青（对应 GeLi 图标配色）。"""
+    canvas.delete("brand_grad")
+    if width <= 1 or height <= 0:
+        return
+    step = 2
+    for x in range(0, width, step):
+        color = _mix(MINT, CYAN, x / max(width - 1, 1))
+        canvas.create_rectangle(x, 0, x + step, height, fill=color,
+                                outline="", tags="brand_grad")
 
 
 def enable_dpi_awareness():
@@ -856,12 +896,18 @@ class RconApp:
         self.messagebox = messagebox
 
         self.root = tk.Tk()
-        self.root.title("RCON 控制台")
+        self.root.title("GeLi RCON")
         self.root.configure(bg=WHITE)
         self.root.resizable(False, False)
         self._build_ui()
-        self._center_window(420, 330)
+        self._fit_window(440)
         self.root.protocol("WM_DELETE_WINDOW", self.quit_action)
+
+    def _fit_window(self, width):
+        """按内容实际需要的高度定尺寸，避免底部控件被裁切。"""
+        self.root.update_idletasks()
+        height = self.root.winfo_reqheight()
+        self._center_window(width, height)
 
     def _center_window(self, w, h):
         sw = self.root.winfo_screenwidth()
@@ -872,18 +918,28 @@ class RconApp:
 
     def _build_ui(self):
         tk = self.tk
-        # 顶部蓝色装饰条
-        tk.Frame(self.root, bg=BLUE, height=4).pack(fill="x")
+        # 顶部品牌渐变条（浅绿 → 浅青）
+        strip = tk.Canvas(self.root, height=5, bg=MINT, highlightthickness=0, bd=0)
+        strip.pack(fill="x")
+        strip.bind("<Configure>", lambda e: draw_brand_gradient(strip, e.width, e.height))
 
         body = tk.Frame(self.root, bg=WHITE)
         body.pack(fill="both", expand=True, padx=30, pady=24)
         body.grid_columnconfigure(0, weight=1)
 
-        # 标题
-        tk.Label(body, text="RCON 控制台", bg=WHITE, fg=DARK_TEXT,
-                 font=(FONT, 20, "bold")).grid(row=0, column=0, sticky="w")
-        tk.Label(body, text="远程服务器控制台", bg=WHITE, fg=GRAY_TEXT,
-                 font=(FONT, 10)).grid(row=1, column=0, sticky="w", pady=(2, 0))
+        # 品牌标题行
+        title_row = tk.Frame(body, bg=WHITE)
+        title_row.grid(row=0, column=0, sticky="w")
+
+        tk.Label(title_row, text="🕊️", bg=WHITE, fg=DARK_TEXT,
+                 font=("Segoe UI Emoji", 17)).pack(side="left", padx=(0, 8))
+        tk.Label(title_row, text="GeLi", bg=WHITE, fg=DARK_TEXT,
+                 font=(FONT, 20, "bold")).pack(side="left")
+        tk.Label(title_row, text="RCON", bg=WHITE, fg=BLUE,
+                 font=(FONT, 20, "bold")).pack(side="left", padx=(4, 0))
+
+        tk.Label(body, text="跨游戏 RCON 远程控制台 · 开箱即用", bg=WHITE, fg=GRAY_TEXT,
+                 font=(FONT, 10)).grid(row=1, column=0, sticky="w", pady=(3, 0))
 
         # 状态卡片（浅灰底，圆点 + 文字 + 地址，grid 对齐避免错位）
         card = tk.Frame(body, bg=LIGHT_BG)

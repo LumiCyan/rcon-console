@@ -111,5 +111,5 @@ const server = net.createServer((socket) => {
 server.listen(PORT, HOST, () => {
   console.log(`Mock RCON 服务器已启动: ${HOST}:${PORT}`);
   console.log(`密码: ${PASSWORD}`);
-  console.log('现在可以用 RCON 控制台连接测试。');
+  console.log('现在可以用 GeLi RCON 连接测试。');
 });
